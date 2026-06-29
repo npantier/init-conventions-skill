@@ -32,30 +32,33 @@ pnpm add -D prettier
 ## eslint (flat config)
 
 ```bash
-pnpm add -D eslint @eslint/js typescript-eslint eslint-plugin-import
+pnpm add -D eslint @eslint/js typescript-eslint eslint-plugin-import-x
 ```
+
+`eslint-plugin-import-x` is the maintained, flat-config-native fork of
+`eslint-plugin-import` — fewer ESLint 9 / flat-config compatibility issues.
 
 `eslint.config.js` (enforces Domain 1: arrow functions + named exports):
 
 ```js
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import importPlugin from 'eslint-plugin-import';
+import importX from 'eslint-plugin-import-x';
 
 export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    plugins: { import: importPlugin },
+    plugins: { 'import-x': importX },
     rules: {
-      'func-style': ['error', 'expression', { allowArrowFunctions: true }],
-      'import/no-default-export': 'error',
+      'func-style': ['error', 'expression'],
+      'import-x/no-default-export': 'error',
     },
   },
   {
     // framework files that REQUIRE a default export
-    files: ['**/entrypoints/**', '**/*.stories.tsx', '**/*.config.*'],
-    rules: { 'import/no-default-export': 'off' },
+    files: ['**/entrypoints/**', '**/*.stories.tsx', '**/.storybook/**', '**/*.config.*'],
+    rules: { 'import-x/no-default-export': 'off' },
   },
 );
 ```
@@ -100,9 +103,9 @@ dev before running, then:
 pnpm dlx storybook@latest init
 ```
 
-After init, verify `.storybook/` exists and `pnpm storybook` boots. Add a
-`*.stories.tsx` exemption to the eslint default-export rule (already in the
-eslint config above).
+After init, verify `.storybook/` exists and `pnpm storybook` boots. The eslint
+config above already exempts `*.stories.tsx` and `.storybook/**` (Storybook's
+`main.ts` / `preview.ts` use default exports) from the default-export rule.
 
 ## test layout (`__tests__/`)
 
@@ -115,6 +118,7 @@ eslint config above).
 
 ## tsconfig strict flags
 
-Ensure `compilerOptions` includes: `"strict": true`,
-`"noUncheckedIndexedAccess": true`, `"noImplicitOverride": true`. Add a
-`"compile": "tsc --noEmit"` script if absent.
+Apply only the flags the dev opted into in Domain 7 — do not force the full set.
+Candidates: `"strict": true` (baseline recommendation),
+`"noUncheckedIndexedAccess": true`, `"noImplicitOverride": true`. Leave any the dev
+declined as-is. Add a `"compile": "tsc --noEmit"` script if absent.

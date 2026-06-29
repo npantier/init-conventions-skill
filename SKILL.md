@@ -42,12 +42,15 @@ ls .storybook 2>/dev/null               # storybook already set up?
 ls CLAUDE.md docs/adr 2>/dev/null       # AI config + ADR practice already present?
 ```
 
-Also sample the existing code style so you can detect conflicts later:
+Also sample the existing code style so you can detect conflicts later. Use plain
+`grep` (not `git grep`) — a fresh repo often has no commits, and `git grep` only
+searches tracked files, so it silently finds nothing in the greenfield case this
+skill targets:
 
 ```bash
-git grep -c "export default" -- 'src/**' 'app/**' 2>/dev/null      # default exports in use?
-git grep -lE "export (async )?function" -- 'src/**' 'app/**' 2>/dev/null   # function declarations?
-git grep -l "__tests__" -- . 2>/dev/null ; git grep -l "\.test\." -- 'src/**' 2>/dev/null  # test layout
+grep -rl "export default" src app 2>/dev/null                 # default exports in use?
+grep -rlE "export (async )?function" src app 2>/dev/null      # function declarations?
+grep -rl "__tests__" src app 2>/dev/null ; grep -rl "\.test\." src app 2>/dev/null  # test layout
 ```
 
 Summarize the snapshot to the user: package manager, language/framework, what's

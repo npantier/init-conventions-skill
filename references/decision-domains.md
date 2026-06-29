@@ -8,10 +8,10 @@ any already configured or clearly N/A.
 
 - **arrow functions vs declarations** — recommend **arrow functions** for module
   functions/components. Enforced via eslint `func-style: ["error", "expression"]`
-  (allow arrow). Framework-required exports (e.g. WXT `defineBackground`) stay as
-  they are.
+  (arrow functions allowed under `"expression"`). Framework-required exports (e.g.
+  WXT `defineBackground`) stay as they are.
 - **named vs default exports** — recommend **named exports**. Enforce via eslint
-  `import/no-default-export` (or `no-restricted-syntax`), with an override for
+  `import-x/no-default-export` (or `no-restricted-syntax`), with an override for
   files the framework requires default exports (entrypoints, route files,
   `*.stories.tsx` if the tooling needs it).
 - **naming** — descriptive names (`isUserAuthenticated`, not `auth`).
@@ -51,14 +51,24 @@ any already configured or clearly N/A.
   non-component libraries. Storybook's init is heavy/interactive — see scaffolding
   notes before running.
 
-## 9. Docs & ADR practice (opt-in)
+## 7. TypeScript strictness — config-bearing
+
+- Recommend **`strict: true`** as the baseline. Present the stricter add-ons as
+  separate opt-ins, each with a recommendation: **`noUncheckedIndexedAccess`**
+  (recommend on — surfaces undefined from index access; can be noisy in array-heavy
+  code) and **`noImplicitOverride`** (recommend on). Never auto-apply — surface the
+  repo's current `compilerOptions` and let the dev decide each.
+- **BYO / keep existing** offered: if the repo already sets these, note them as
+  already set rather than rewriting.
+
+## 8. Docs & ADR practice (opt-in)
 
 - Single decision: **adopt an ADR practice?** Recommend **yes**.
 - If yes: scaffold `docs/adr/` + the ADR template, optionally seed `0001`, and add
   the CLAUDE.md directive (major decisions → ADR). **No ADRs are minted for the
   setup choices themselves.**
 
-## 10. AI-agent config
+## 9. AI-agent config
 
 - **CLAUDE.md shell** — recommend creating/augmenting from the template.
 - **gitignore AI artifacts** — recommend ignoring `.sdd`, `superpowers`, and
