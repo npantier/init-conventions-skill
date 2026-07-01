@@ -24,10 +24,21 @@ any already configured or clearly N/A.
 
 - Recommend **prettier on**: config + a `format` and `format:check` script.
 - **BYO config** offered. Default config is in `references/scaffolding.md`.
+- **Don't reformat committed docs.** `prettier --write .` will normalize already-
+  committed plan/spec markdown. The default `.prettierignore` excludes plan/spec
+  dirs (`docs/**/plans`, `specs`, `docs/superpowers`); still **warn before the
+  first `format:write`** that it touches tracked files, so the dev can widen or
+  narrow the ignore before churn lands.
 
-## 3. Lint (eslint) — config-bearing
+## 3. Lint (eslint / oxlint) — config-bearing
 
 - Recommend **eslint on** (flat config), wired to enforce the Domain 1 choices.
+- **oxlint already present?** A `.oxlintrc.json` (create-vite v9's default) means
+  the linter is **already set** — treat it as such and do **not** push eslint on
+  top. Offer the "keep oxlint + add the two style rules" path: map Domain 1 to
+  oxlint's `func-style` + `import/no-default-export` (see the oxlint branch in
+  `references/scaffolding.md`). eslint stays an option only if the dev wants to
+  switch.
 - Optional lint-staged scope (or leave linting to lefthook + scripts).
 - **BYO config** offered.
 
@@ -60,6 +71,11 @@ any already configured or clearly N/A.
   repo's current `compilerOptions` and let the dev decide each.
 - **BYO / keep existing** offered: if the repo already sets these, note them as
   already set rather than rewriting.
+- **Split tsconfig (modern create-vite):** apply `strict` to the config that
+  actually compiles `src` — the one with `include: ["src"]` (e.g.
+  `tsconfig.app.json`), detected via `include` / project references, **not**
+  assumed to be root `tsconfig.json` (which may just hold references). If tests
+  use `globals: true`, also add `"vitest/globals"` to that config's `types`.
 
 ## 8. Docs & ADR practice (opt-in)
 

@@ -3,6 +3,13 @@
 Commands shown for **pnpm** (primary). For npm use `npm i -D` / `npm run`; for
 yarn `yarn add -D` / `yarn`. Always wire matching `package.json` scripts.
 
+**Default to pnpm on greenfield.** With no existing lockfile, scaffold with pnpm
+from the start and set `"packageManager": "pnpm@<version>"` in `package.json`.
+If a plan's scaffold step hardcodes `npm create vite` / `npm install`, flag it
+and offer the pnpm equivalent (`pnpm create vite`, `pnpm add -D …`) rather than
+letting an npm lockfile carry through by accident. Honor an existing non-pnpm
+lockfile only when the dev wants to keep it.
+
 ## prettier
 
 ```bash
@@ -20,7 +27,10 @@ pnpm add -D prettier
 }
 ```
 
-`.prettierignore`: `node_modules`, build output (`.output`, `dist`), lockfiles.
+`.prettierignore`: `node_modules`, build output (`.output`, `dist`), lockfiles,
+and committed plan/spec dirs (`docs/**/plans`, `specs`, `docs/superpowers`) so
+the first `format --write` doesn't reformat already-committed docs. Warn the dev
+before that first write regardless — it still touches other tracked files.
 
 `package.json` scripts:
 
@@ -65,6 +75,33 @@ export default tseslint.config(
 
 `package.json` script: `"lint": "eslint ."`
 
+## oxlint (keep-existing branch)
+
+When detection finds `.oxlintrc.json` (create-vite v9's default), keep oxlint and
+add the two Domain 1 style rules rather than layering eslint on top. Add
+`"import"` to `plugins` so the import rule resolves:
+
+```json
+{
+  "plugins": ["import"],
+  "rules": {
+    "func-style": ["error", "expression"],
+    "import/no-default-export": "error"
+  }
+}
+```
+
+Exempt framework files that require a default export (entrypoints,
+`*.stories.tsx`, `.storybook/**`, `*.config.*`) via `overrides` with
+`import/no-default-export` set to `"off"`.
+
+`package.json` script: `"lint": "oxlint"`.
+
+**Verify by planting a violation** — oxlint has no `--print-config`, so a clean
+exit doesn't prove the rules are wired. Add a default export and an expression-vs-
+declaration violation, run `oxlint`, confirm both fire
+(`error import(no-default-export)`, `error eslint(func-style)`), then revert.
+
 ## lefthook
 
 ```bash
@@ -92,7 +129,8 @@ pre-push:
       run: pnpm test
 ```
 
-Adjust `compile`/`test` to the repo's actual script names.
+Adjust `compile`/`test` to the repo's actual script names, and the `lint` command
+to the chosen linter (`pnpm oxlint {staged_files}` if the repo kept oxlint).
 
 ## storybook
 
@@ -122,3 +160,11 @@ Apply only the flags the dev opted into in Domain 7 — do not force the full se
 Candidates: `"strict": true` (baseline recommendation),
 `"noUncheckedIndexedAccess": true`, `"noImplicitOverride": true`. Leave any the dev
 declined as-is. Add a `"compile": "tsc --noEmit"` script if absent.
+
+**Target the config that actually compiles `src`.** Modern create-vite splits
+tsconfig into `tsconfig.app.json` / `tsconfig.node.json` with the root
+`tsconfig.json` holding only project references. `strict` belongs in the config
+whose `include` covers `src` (usually `tsconfig.app.json`), not the reference-only
+root. Detect it via `include` / `references` rather than assuming a single file.
+If tests use `globals: true`, also add `"vitest/globals"` to that config's
+`types` so the global test API types resolve.

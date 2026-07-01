@@ -37,15 +37,31 @@ ls -la                                  # top-level: configs present?
 cat package.json 2>/dev/null            # scripts, deps, type:module
 ls pnpm-lock.yaml package-lock.json yarn.lock 2>/dev/null   # package manager
 cat .gitignore 2>/dev/null              # AI-artifact entries already present?
-ls .prettierrc* prettier.config.* eslint.config.* .eslintrc* lefthook.yml .husky 2>/dev/null
+ls .prettierrc* prettier.config.* eslint.config.* .eslintrc* .oxlintrc* lefthook.yml .husky 2>/dev/null
 ls .storybook 2>/dev/null               # storybook already set up?
 ls CLAUDE.md docs/adr 2>/dev/null       # AI config + ADR practice already present?
 ```
 
-Also sample the existing code style so you can detect conflicts later. Use plain
-`grep` (not `git grep`) — a fresh repo often has no commits, and `git grep` only
-searches tracked files, so it silently finds nothing in the greenfield case this
-skill targets:
+`.oxlintrc.json` means **oxlint** is the linter (create-vite v9's default) — a
+present linter, not a gap to fill with eslint. See Domain 3.
+
+Also look for a **pre-existing implementation plan** — the skill is not the only
+thing that scaffolds a repo, and a plan's own setup step changes who owns
+bootstrapping (see Step 2):
+
+```bash
+ls docs/superpowers 2>/dev/null ; find docs specs -name '*.md' 2>/dev/null | head   # plans / specs
+```
+
+If a plan exists, **read it** and mine it for two things: (a) any scaffold step
+(e.g. `create-vite`, `create-next-app`) that will generate `package.json` +
+configs; (b) code-style signals hiding in its fenced code blocks. On a greenfield
+repo the only export/style evidence lives in the plan's code — `grep`-ing `src/`
+finds nothing.
+
+Then sample the existing on-disk code style. Use plain `grep` (not `git grep`) —
+a fresh repo often has no commits, and `git grep` only searches tracked files, so
+it silently finds nothing in the greenfield case this skill targets:
 
 ```bash
 grep -rl "export default" src app 2>/dev/null                 # default exports in use?
@@ -53,11 +69,31 @@ grep -rlE "export (async )?function" src app 2>/dev/null      # function declara
 grep -rl "__tests__" src app 2>/dev/null ; grep -rl "\.test\." src app 2>/dev/null  # test layout
 ```
 
-Summarize the snapshot to the user: package manager, language/framework, what's
-already configured (mark those "already set"), and the current code-style /
-test-layout signals.
+**Package manager:** if a lockfile exists, honor it. On a greenfield repo with no
+lockfile, **default to pnpm** (`scaffolding.md`'s primary) rather than falling
+into whatever a plan's commands happen to hardcode.
+
+Summarize the snapshot to the user: package manager, language/framework, whether
+a plan exists (and whether it scaffolds), what's already configured (mark those
+"already set"), and the current code-style / test-layout signals — including any
+mined from the plan.
 
 ## Step 2 — Walk the decision domains
+
+**If an implementation plan exists (from Step 1), reconcile ownership first.**
+The skill's tooling installs need `package.json` to exist, but a plan's scaffold
+step (`create-vite` et al.) wants a near-empty dir and will clobber configs
+written before it. Resolve the ordering explicitly:
+
+- Let the **scaffolder bootstrap** `package.json` + base configs first, then run
+  the skill in **"detect & layer the gaps"** mode over the result — do not
+  race it. This is what "detect, don't ask / never silently rewrite" already
+  implies; the plan just makes it concrete.
+- **Re-detect after scaffolding — don't trust the plan's tooling assumptions.**
+  A same-day plan can still be wrong about what the scaffolder actually produces.
+  A real run saw Vite 8 (plan said 6), **oxlint not eslint**, a split tsconfig
+  with no `strict:true`, and an npm lockfile — every one contradicted the plan.
+  Detect the real baseline, then layer.
 
 Read `references/decision-domains.md`. Walk the in-scope domains **one at a time**.
 For each domain:
@@ -112,6 +148,13 @@ Run the toolchain just scaffolded and report **real output**, e.g.:
 ```
 
 If any gate fails, fix or report it honestly. No "should work" claims.
+
+**Confirm the style rules actually fire — don't trust a clean lint exit.** A
+linter passing proves nothing until you've seen it reject a violation. Plant a
+default export and an expression-vs-declaration violation, lint, confirm both
+error, then revert. This matters most for **oxlint**, which has no
+`--print-config` — planting a violation is the only reliable way to confirm a
+rule is wired.
 
 ## Step 5 — Hand off
 
